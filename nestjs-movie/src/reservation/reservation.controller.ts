@@ -78,7 +78,7 @@ export class ReservationController {
   @ApiResponse({
     status: 200,
     description: "Liste des réservations de l'utilisateur.",
-    type: [CreateReservationDto], // Optionnel : vous pouvez également définir un type personnalisé pour les réservations retournées
+    type: [CreateReservationDto], 
     examples: {
       application_json: {
         summary: 'Exemple de réponse pour récupérer les réservations',

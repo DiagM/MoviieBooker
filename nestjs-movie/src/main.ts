@@ -1,13 +1,22 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common'; // ← Ajoute ceci
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // 👇 Ajoute cette ligne pour activer la validation des DTO
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   app.enableCors({
-    origin: '*', 
+    origin: '*',
   });
 
   const config = new DocumentBuilder()

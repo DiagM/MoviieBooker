@@ -1,17 +1,18 @@
-import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MoviesList from "./components/MoviesList";
+import Login from "./components/login";
+import Register from "./components/register";
 
-const App = () => {
+function App() {
   return (
-    <div>
-      <header className="bg-gray-800 text-white p-4 text-center">
-        <h1 className="text-3xl">Movie Reservations</h1>
-      </header>
-      <main>
-        <MoviesList />
-      </main>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<MoviesList />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </Router>
   );
-};
+}
 
 export default App;
