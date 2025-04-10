@@ -11,8 +11,8 @@ const MoviesList = () => {
   const [sort, setSort] = useState("popularity.desc");
   const [totalPages, setTotalPages] = useState(1);
   const [activeTab, setActiveTab] = useState("movies");
-  const [showModal, setShowModal] = useState(false); // Nouvelle variable d'état pour la modale
-  const [errorMessage, setErrorMessage] = useState(""); // Gestion des erreurs
+  const [showModal, setShowModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const apiUrl = process.env.REACT_APP_API_URL;
 
@@ -21,76 +21,57 @@ const MoviesList = () => {
     setIsAuthenticated(!!token);
   }, []);
 
-  // Fetch movies
-  useEffect(() => {
-    const fetchMovies = async () => {
-      try {
-        const response = await axios.get(`${apiUrl}/movies`, {
-          params: { page, search, sort },
-        });
-        setMovies(response.data.results);
-        setTotalPages(response.data.total_pages);
-      } catch (error) {
-        console.error("Error fetching movies:", error);
-        setErrorMessage("Erreur lors du chargement des films.");
-      }
-    };
-    fetchMovies();
-  }, [page, search, sort]);
+  const fetchMovies = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/movies`, {
+        params: { page, search, sort },
+      });
+      setMovies(response.data.results);
+      setTotalPages(response.data.total_pages);
+    } catch (error) {
+      setErrorMessage("Erreur lors du chargement des films.");
+      console.error(error);
+    }
+  };
 
-  // Fetch reservations
-  useEffect(() => {
-    const fetchReservations = async () => {
-      try {
-        const token = localStorage.getItem("auth_token");
-        const response = await axios.get(`${apiUrl}/reservations`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setReservations(response.data);
-      } catch (error) {
-        console.error("Error fetching reservations:", error);
-        setErrorMessage("Erreur lors du chargement des réservations.");
-      }
-    };
-    fetchReservations();
-  }, []);
+  const fetchReservations = async () => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await axios.get(`${apiUrl}/reservations`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setReservations(response.data);
+    } catch (error) {
+      setErrorMessage("Erreur lors du chargement des réservations, connectez-vous.");
+      console.error(error);
+    }
+  };
 
   const createReservation = async () => {
     if (!reservationTime) {
-      alert("La date et l'heure de la réservation sont requises.");
+      setErrorMessage("La date et l'heure de la réservation sont requises.");
       return;
     }
+
     try {
       const token = localStorage.getItem("auth_token");
       const response = await axios.post(
         `${apiUrl}/reservations`,
-        {
-          movieId: selectedMovie.id, // Utilisation de l'objet movie au lieu de juste l'id
-          startTime: reservationTime,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { movieId: selectedMovie.id.toString(), startTime: reservationTime },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      setReservations((prevReservations) => [
-        ...prevReservations,
-        response.data,
-      ]);
-      setShowModal(false); // Fermer la modale après la réservation
-      setErrorMessage(""); // Réinitialiser l'erreur
+      setReservations((prev) => [...prev, response.data]);
+      setShowModal(false);
+      setErrorMessage("");
     } catch (error) {
-      console.error("Error creating reservation:", error);
       if (error.response && error.response.status === 409) {
-        setErrorMessage(
-          "Conflit avec une autre réservation. Respectez un délai de 2h entre deux films."
-        );
+        setErrorMessage("Conflit avec une autre réservation. Respectez un délai de 2h.");
       } else {
-        setErrorMessage("Erreur lors de la création de la réservation.");
+        setErrorMessage("Erreur lors de la création de la réservation. Connectez-vous.");
       }
+      console.error(error);
     }
   };
 
@@ -98,65 +79,61 @@ const MoviesList = () => {
     try {
       const token = localStorage.getItem("auth_token");
       await axios.delete(`${apiUrl}/reservations/${reservationId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setReservations((prevReservations) =>
-        prevReservations.filter(
-          (reservation) => reservation.id !== reservationId
-        )
+      setReservations((prev) =>
+        prev.filter((reservation) => reservation._id !== reservationId)
       );
-      setErrorMessage(""); // Réinitialiser l'erreur
+      setErrorMessage("");
     } catch (error) {
-      console.error("Error canceling reservation:", error);
-      if (error.response && error.response.status === 404) {
-        setErrorMessage("Réservation introuvable.");
-      } else {
-        setErrorMessage("Erreur lors de l'annulation de la réservation.");
-      }
+      setErrorMessage("Erreur lors de l'annulation de la réservation.");
+      console.error(error);
     }
   };
 
-  // Handle page change
   const handlePageChange = (newPage) => {
     if (newPage > 0 && newPage <= totalPages) {
       setPage(newPage);
     }
   };
 
+  useEffect(() => {
+    fetchMovies();
+  }, [page, search, sort]);
+
+  useEffect(() => {
+    if (isAuthenticated) fetchReservations();
+  }, [isAuthenticated]);
+
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-6">
       {/* Navbar */}
-      <nav className="flex justify-between items-center mb-6">
+      <nav className="flex justify-between items-center mb-6 bg-gray-900 p-4 rounded-md shadow-md">
         <div className="space-x-4">
           <button
             onClick={() => setActiveTab("movies")}
             className={`p-2 rounded-md ${
-              activeTab === "movies" ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
+              activeTab === "movies" ? "bg-blue-500 text-white" : "bg-gray-700 text-white"
+            } transition-colors`}
           >
             Films
           </button>
           <button
             onClick={() => setActiveTab("reservations")}
             className={`p-2 rounded-md ${
-              activeTab === "reservations"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200"
-            }`}
+              activeTab === "reservations" ? "bg-blue-500 text-white" : "bg-gray-700 text-white"
+            } transition-colors`}
           >
             Réservations
           </button>
         </div>
-
         <div className="space-x-4">
           {isAuthenticated ? (
             <button
               onClick={() => {
                 localStorage.removeItem("auth_token");
                 setIsAuthenticated(false);
-                window.location.reload(); // Pour recharger l'état
+                window.location.reload();
               }}
               className="p-2 bg-red-500 text-white rounded-md"
             >
@@ -164,16 +141,10 @@ const MoviesList = () => {
             </button>
           ) : (
             <>
-              <a
-                href="/login"
-                className="p-2 bg-blue-500 text-white rounded-md"
-              >
+              <a href="/login" className="p-2 bg-blue-500 text-white rounded-md">
                 Login
               </a>
-              <a
-                href="/register"
-                className="p-2 bg-green-500 text-white rounded-md"
-              >
+              <a href="/register" className="p-2 bg-green-500 text-white rounded-md">
                 Register
               </a>
             </>
@@ -181,94 +152,93 @@ const MoviesList = () => {
         </div>
       </nav>
 
-      {/* Display error message */}
+      {/* Error message */}
       {errorMessage && (
-        <div className="text-red-500 text-center mb-4">{errorMessage}</div>
+        <div className="text-red-500 text-center mb-4 font-semibold">
+          {errorMessage}
+        </div>
       )}
 
-      {/* Display content based on active tab */}
+      {/* Tab content */}
       {activeTab === "movies" && (
         <>
           {/* Search */}
-          <div className="mb-4">
+          <div className="mb-4 flex justify-between items-center">
             <input
               type="text"
-              placeholder="Search movies"
-              className="p-2 border border-gray-300 rounded-md"
+              placeholder="Rechercher un film..."
+              className="p-2 border border-gray-300 rounded-md w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
-
-          {/* Sort */}
-          <div className="mb-4">
             <select
-              className="p-2 border border-gray-300 rounded-md"
+              className="ml-4 p-2 border border-gray-300 rounded-md"
               value={sort}
               onChange={(e) => setSort(e.target.value)}
             >
-              <option value="popularity.desc">Popularity (Desc)</option>
-              <option value="popularity.asc">Popularity (Asc)</option>
-              <option value="release_date.desc">Release Date (Desc)</option>
-              <option value="release_date.asc">Release Date (Asc)</option>
+              <option value="popularity.desc">Popularité (Desc)</option>
+              <option value="popularity.asc">Popularité (Asc)</option>
+              <option value="release_date.desc">Date de sortie (Desc)</option>
+              <option value="release_date.asc">Date de sortie (Asc)</option>
             </select>
           </div>
 
           {/* Movie list */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {movies.map((movie) => (
-              <div key={movie.id} className="border p-4 rounded-md">
+              <div key={movie.id} className="bg-white shadow-lg rounded-md overflow-hidden">
                 <img
                   src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
                   alt={movie.title}
-                  className="w-full h-auto rounded-md"
+                  className="w-full h-56 object-cover"
                 />
-                <h3 className="text-xl mt-2">{movie.title}</h3>
-                <p>{movie.release_date}</p>
-                <p>{movie.overview}</p>
-                <button
-                  onClick={() => {
-                    setSelectedMovie(movie);
-                    setShowModal(true); // Afficher la modale quand un film est sélectionné
-                  }}
-                  className="mt-2 p-2 bg-blue-500 text-white rounded-md"
-                >
-                  Réserver
-                </button>
+                <div className="p-4">
+                  <h3 className="text-xl font-bold">{movie.title}</h3>
+                  <p className="text-gray-600">{movie.release_date}</p>
+                  <p className="text-gray-800 mt-2">{movie.overview}</p>
+                  <button
+                    onClick={() => {
+                      setSelectedMovie(movie);
+                      setShowModal(true);
+                    }}
+                    className="mt-4 p-2 bg-blue-500 text-white rounded-md w-full"
+                  >
+                    Réserver
+                  </button>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Create reservation */}
+          {/* Reservation modal */}
           {showModal && selectedMovie && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-              <div className="bg-white p-6 rounded-md w-1/3">
-                <h4 className="text-xl font-bold">{selectedMovie.title}</h4>
-                <p className="text-gray-600">{selectedMovie.overview}</p>
-                <div className="mt-4">
-                  <p className="text-sm font-semibold">Date de sortie :</p>
-                  <p className="text-sm">{selectedMovie.release_date}</p>
+              <div className="bg-white p-6 rounded-md w-1/3 shadow-lg">
+                <h4 className="text-xl font-bold mb-2">{selectedMovie.title}</h4>
+                <p className="text-gray-600 mb-4">{selectedMovie.overview}</p>
+                <input
+                  type="datetime-local"
+                  value={reservationTime}
+                  onChange={(e) => setReservationTime(e.target.value)}
+                  className="p-2 border border-gray-300 rounded-md w-full mb-4"
+                />
+                {errorMessage && (
+                  <div className="text-red-500 text-sm mt-2">{errorMessage}</div>
+                )}
+                <div className="flex justify-between mt-4">
+                  <button
+                    onClick={createReservation}
+                    className="p-2 bg-green-500 text-white rounded-md w-48"
+                  >
+                    Confirmer
+                  </button>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="p-2 bg-red-500 text-white rounded-md w-48"
+                  >
+                    Annuler
+                  </button>
                 </div>
-                <div className="mt-4">
-                  <input
-                    type="datetime-local"
-                    value={reservationTime}
-                    onChange={(e) => setReservationTime(e.target.value)}
-                    className="p-2 border border-gray-300 rounded-md w-full"
-                  />
-                </div>
-                <button
-                  onClick={createReservation}
-                  className="mt-4 p-2 bg-green-500 text-white rounded-md w-full"
-                >
-                  Confirmer la réservation
-                </button>
-                <button
-                  onClick={() => setShowModal(false)} // Fermer la modale sans réserver
-                  className="mt-2 p-2 bg-red-500 text-white rounded-md w-full"
-                >
-                  Annuler
-                </button>
               </div>
             </div>
           )}
@@ -276,18 +246,15 @@ const MoviesList = () => {
       )}
 
       {activeTab === "reservations" && (
-        <>
-          {/* Reservations list */}
-          <div className="mt-4">
-            <h3 className="text-2xl font-bold">Mes réservations</h3>
-            {reservations.map((reservation) => (
-              <div key={reservation._id} className="border p-4 rounded-md mt-2">
-                <p>
-                  <strong>Film:</strong> {reservation.movieId}
-                </p>
-                <p>
-                  <strong>Date:</strong> {reservation.startTime}
-                </p>
+        <div>
+          <h3 className="text-2xl font-bold mb-4">Mes réservations</h3>
+          {reservations.length === 0 ? (
+            <p className="text-gray-600">Vous n'avez aucune réservation.</p>
+          ) : (
+            reservations.map((reservation) => (
+              <div key={reservation._id} className="bg-white shadow-md p-4 rounded-md mt-4">
+                <p><strong>Film:</strong> {reservation.movieId}</p>
+                <p><strong>Date:</strong> {reservation.startTime}</p>
                 <button
                   onClick={() => cancelReservation(reservation._id)}
                   className="mt-2 p-2 bg-red-500 text-white rounded-md"
@@ -295,29 +262,29 @@ const MoviesList = () => {
                   Annuler la réservation
                 </button>
               </div>
-            ))}
-          </div>
-        </>
+            ))
+          )}
+        </div>
       )}
 
       {/* Pagination */}
-      <div className="flex justify-between mt-4">
+      <div className="flex justify-between mt-6">
         <button
           onClick={() => handlePageChange(page - 1)}
           disabled={page === 1}
           className="p-2 bg-blue-500 text-white rounded-md"
         >
-          Previous
+          Précédent
         </button>
         <span>
-          Page {page} of {totalPages}
+          Page {page} de {totalPages}
         </span>
         <button
           onClick={() => handlePageChange(page + 1)}
           disabled={page === totalPages}
           className="p-2 bg-blue-500 text-white rounded-md"
         >
-          Next
+          Suivant
         </button>
       </div>
     </div>

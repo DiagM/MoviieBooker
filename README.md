@@ -76,6 +76,12 @@ npx jest reservation
 
 ### Déploiement
 
+Backend:
+
+https://moviiebooker-lb4l.onrender.com
+
+frontend:
+
 ### Conclusion
 
 Ce projet offre une gestion complète des réservations de films, incluant la sécurisation des routes avec JWT et une interface utilisateur claire et moderne avec ReactJS et TailwindCSS. Grâce à la documentation Swagger, les utilisateurs et développeurs peuvent interagir facilement avec l'API.
